@@ -1,0 +1,8 @@
+node_modules
+.next
+.env.local
+.env*.local
+sa-key.json
+*-key.json
+*.log
+.DS_Store
