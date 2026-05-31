@@ -21,6 +21,7 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
   const cap = Number(form.capacity);
   const proj = Number(form.projection);
   const utilization = cap > 0 && proj > 0 ? proj / cap : null;
+  const bottleneckRequired = proj > cap && cap > 0;
 
   function set(k: string, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -28,6 +29,12 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (bottleneckRequired && form.bottleneckArea.trim() === "") {
+      return setMsg({
+        ok: false,
+        text: "Projection exceeds Capacity — Bottleneck Area is required.",
+      });
+    }
     setMsg(null);
     setLoading(true);
     const res = await fetch("/api/capacity", {
@@ -37,8 +44,8 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
     });
     const data = await res.json();
     setLoading(false);
-    if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to save." });
-    setMsg({ ok: true, text: `Saved to Google Sheet. Utilization = ${(data.utilization * 100).toFixed(1)}%.` });
+    if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to submit." });
+    setMsg({ ok: true, text: `Submitted. Utilization = ${(data.utilization * 100).toFixed(1)}%.` });
     setForm({ month: "", capacity: "", projection: "", peakUtilizationPct: "", bottleneckArea: "", expandableCapacity: "" });
   }
 
@@ -78,13 +85,18 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
         </div>
       </div>
 
-      <label>Bottleneck Area</label>
-      <input value={form.bottleneckArea} onChange={(e) => set("bottleneckArea", e.target.value)} placeholder="optional" />
+      <label>Bottleneck Area{bottleneckRequired && <span className="req"> *</span>}</label>
+      <input
+        value={form.bottleneckArea}
+        onChange={(e) => set("bottleneckArea", e.target.value)}
+        placeholder={bottleneckRequired ? "required — projection exceeds capacity" : "optional"}
+        required={bottleneckRequired}
+      />
 
       <p className="muted">Recorded automatically: {userEmail} · {today}</p>
 
       {msg && <div className={msg.ok ? "success" : "error"}>{msg.text}</div>}
-      <button className="btn" disabled={loading}>{loading ? "Saving…" : "Save to Google Sheet"}</button>
+      <button className="btn" disabled={loading}>{loading ? "Submitting…" : "Submit"}</button>
     </form>
   );
 }

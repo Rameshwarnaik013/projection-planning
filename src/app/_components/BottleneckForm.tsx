@@ -19,6 +19,7 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
   const cur = Number(form.currentCapacity);
   const req = Number(form.requiredCapacity);
   const gap = form.currentCapacity !== "" && form.requiredCapacity !== "" ? req - cur : null;
+  const actionRequired = form.currentCapacity !== "" && form.requiredCapacity !== "" && req > cur;
 
   function set(k: string, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -26,6 +27,12 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (actionRequired && form.actionRequired.trim() === "") {
+      return setMsg({
+        ok: false,
+        text: "Required Capacity exceeds Current — Action Required must be filled.",
+      });
+    }
     setMsg(null);
     setLoading(true);
     const res = await fetch("/api/bottleneck", {
@@ -35,8 +42,8 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
     });
     const data = await res.json();
     setLoading(false);
-    if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to save." });
-    setMsg({ ok: true, text: `Saved to Google Sheet. Gap = ${data.gap}.` });
+    if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to submit." });
+    setMsg({ ok: true, text: `Submitted. Gap = ${data.gap}.` });
     setForm({ process: "", currentCapacity: "", requiredCapacity: "", actionRequired: "" });
   }
 
@@ -69,13 +76,19 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
       <label>Gap (Required − Current)</label>
       <input value={gap !== null ? gap.toString() : "—"} readOnly />
 
-      <label>Action Required</label>
-      <textarea rows={3} value={form.actionRequired} onChange={(e) => set("actionRequired", e.target.value)} placeholder="e.g. Add a roasting line / extend shift" />
+      <label>Action Required{actionRequired && <span className="req"> *</span>}</label>
+      <textarea
+        rows={3}
+        value={form.actionRequired}
+        onChange={(e) => set("actionRequired", e.target.value)}
+        placeholder={actionRequired ? "required — required capacity exceeds current" : "e.g. Add a roasting line / extend shift"}
+        required={actionRequired}
+      />
 
       <p className="muted">Recorded automatically: {userEmail} · {today}</p>
 
       {msg && <div className={msg.ok ? "success" : "error"}>{msg.text}</div>}
-      <button className="btn" disabled={loading}>{loading ? "Saving…" : "Save to Google Sheet"}</button>
+      <button className="btn" disabled={loading}>{loading ? "Submitting…" : "Submit"}</button>
     </form>
   );
 }

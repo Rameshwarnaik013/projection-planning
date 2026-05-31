@@ -102,3 +102,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .center { text-align: center; }
 .spacer { height: 12px; }
 .link-row { margin-top: 16px; text-align: center; font-size: 14px; }
+
+.password-field { position: relative; }
+.password-field input { padding-right: 64px; }
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.password-toggle:hover { color: var(--brand-dark); }
+.req { color: var(--bad); }
