@@ -6,3 +6,5 @@ sa-key.json
 *-key.json
 *.log
 .DS_Store
+
+.vercel
