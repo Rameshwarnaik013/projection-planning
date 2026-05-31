@@ -103,6 +103,11 @@ async function ensureTab(tab: TabName) {
 }
 
 export async function appendRow(tab: TabName, row: (string | number)[]) {
+  await appendRows(tab, [row]);
+}
+
+export async function appendRows(tab: TabName, rows: (string | number)[][]) {
+  if (rows.length === 0) return;
   await ensureTab(tab);
   const sheets = getClient();
   await sheets.spreadsheets.values.append({
@@ -110,7 +115,7 @@ export async function appendRow(tab: TabName, row: (string | number)[]) {
     range: `${tab}!A:A`,
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [row] },
+    requestBody: { values: rows },
   });
 }
 

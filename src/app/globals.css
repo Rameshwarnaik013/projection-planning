@@ -120,3 +120,42 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 }
 .password-toggle:hover { color: var(--brand-dark); }
 .req { color: var(--bad); }
+
+.process-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fafbff;
+}
+.process-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.process-block-title { font-weight: 700; color: var(--ink); font-size: 14px; }
+.remove-process {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--bad);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.remove-process:hover { background: #fee2e2; border-color: var(--bad); }
+.add-process {
+  width: 100%;
+  background: #eef2ff;
+  border: 1px dashed var(--brand);
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.add-process:hover { background: #e0e7ff; }
