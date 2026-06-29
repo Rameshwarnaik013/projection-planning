@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DEFAULT_DAYS, hasConditionsData, packingCapacity } from "@/lib/conditions";
 
 const AVAILABLE_HR = 18;
 
@@ -13,10 +14,21 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
     bottleneckArea: "",
     expandableCapacity: "",
   });
+  const [days, setDays] = useState(String(DEFAULT_DAYS));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [today, setToday] = useState("");
   useEffect(() => setToday(new Date().toLocaleDateString()), []);
+
+  const autoCapacity = hasConditionsData(factory);
+  // Plant-wise Packing Line capacity = Number of days x sum(Per Day Production).
+  // Auto-fills (and recomputes when days change) but stays editable.
+  useEffect(() => {
+    if (!autoCapacity) return;
+    const n = Number(days);
+    if (!n || n <= 0) return;
+    setForm((f) => ({ ...f, capacity: String(packingCapacity(factory, n)) }));
+  }, [factory, days, autoCapacity]);
 
   const cap = Number(form.capacity);
   const proj = Number(form.projection);
@@ -46,7 +58,8 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
     setLoading(false);
     if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to submit." });
     setMsg({ ok: true, text: `Submitted. Utilization = ${(data.utilization * 100).toFixed(1)}%.` });
-    setForm({ month: "", capacity: "", projection: "", peakUtilizationPct: "", bottleneckArea: "", expandableCapacity: "" });
+    const resetCapacity = autoCapacity && Number(days) > 0 ? String(packingCapacity(factory, Number(days))) : "";
+    setForm({ month: "", capacity: resetCapacity, projection: "", peakUtilizationPct: "", bottleneckArea: "", expandableCapacity: "" });
   }
 
   return (
@@ -55,6 +68,9 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
         <strong>Capacity basis:</strong> Available Hr = {AVAILABLE_HR} (2 combined shifts at maximum company
         efficiency). Enter monthly Capacity on this basis. Current Utilization % is auto-calculated as
         Projection ÷ Capacity.
+        {autoCapacity
+          ? " Capacity auto-fills from the plant's Packing Line = Number of days × Per Day Production; edit if needed."
+          : " No reference data for this plant — enter Capacity manually."}
       </div>
 
       <label>Month</label>
@@ -62,14 +78,17 @@ export default function CapacityForm({ factory, userEmail }: { factory: string; 
 
       <div className="row2">
         <div>
+          <label>Number of days</label>
+          <input type="number" min="1" value={days} onChange={(e) => setDays(e.target.value)} placeholder="e.g. 25" />
+        </div>
+        <div>
           <label>Capacity (units / month)</label>
           <input type="number" min="0" value={form.capacity} onChange={(e) => set("capacity", e.target.value)} placeholder="e.g. 2000000" required />
         </div>
-        <div>
-          <label>Projection for the month</label>
-          <input type="number" min="0" value={form.projection} onChange={(e) => set("projection", e.target.value)} placeholder="e.g. 2500000" required />
-        </div>
       </div>
+
+      <label>Projection for the month</label>
+      <input type="number" min="0" value={form.projection} onChange={(e) => set("projection", e.target.value)} placeholder="e.g. 2500000" required />
 
       <label>Current Utilization %</label>
       <input value={utilization !== null ? `${(utilization * 100).toFixed(1)}% (${utilization.toFixed(2)}×)` : "—"} readOnly />

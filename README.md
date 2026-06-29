@@ -62,7 +62,25 @@ Open http://localhost:3000 → Register → pick a factory → fill a form.
    For `GOOGLE_PRIVATE_KEY`, paste the value with literal `\n` sequences exactly as in the JSON.
 4. Deploy. Your team can register and use it from anywhere.
 
+## Plant / Line reference data (auto-fill)
+
+Per-plant production figures from `Conditions.xlsx` live in `src/lib/conditions.ts`
+(aggregated Per Day Production by Plant + Line). They drive the auto-fill:
+
+- **Capacity Planning** — `Capacity (units / month)` auto-fills as
+  `Number of days × Σ(Per Day Production)` for that plant's **Packing Line**.
+  `Number of days` defaults to **25** (which reproduces the sheet's Monthly capacity)
+  and is editable; the resulting capacity is editable too.
+- **Bottleneck Analysis** — the processes are the production **Lines**
+  (`Packing Line`, `Roasting Line`, `Mixing Line`). Each row's `Current Capacity`
+  auto-fills as `Number of days × Σ(Per Day Production)` for that plant + Line.
+
+Plant mapping: `Indore → Indore`, `Bihar → Purnea`, `Kundli → Kundli`.
+`UD` and `South` have no reference rows, so their capacity fields stay manual.
+
 ## Notes
 - Passwords are hashed with bcrypt before storage; sessions are signed JWTs in an httpOnly cookie.
-- To change factories or processes, edit `FACTORIES` in `src/app/factories/page.tsx`
-  and `PROCESSES` in `src/app/_components/BottleneckForm.tsx`.
+- To change factories, edit `FACTORIES` in `src/app/factories/page.tsx`. To change
+  plant/line capacities, processes, or the plant mapping, edit `src/lib/conditions.ts`.
+- `Number of days` is a calculation input only; it is not stored in the Sheet, so the
+  existing tab schemas are unchanged.

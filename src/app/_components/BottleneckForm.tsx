@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DEFAULT_DAYS, LINES, type Line, hasConditionsData, lineCapacity } from "@/lib/conditions";
 
-const PROCESSES = ["Roasting", "Mixing", "Packing", "Secondary Packing"];
+// Processes are the production Lines from Conditions.xlsx.
+const PROCESSES = LINES;
 
 type Entry = {
   process: string;
@@ -19,14 +21,54 @@ const emptyEntry = (): Entry => ({
 });
 
 export default function BottleneckForm({ factory, userEmail }: { factory: string; userEmail: string }) {
-  const [entries, setEntries] = useState<Entry[]>([emptyEntry()]);
+  const autoFill = hasConditionsData(factory);
+  const [days, setDays] = useState(String(DEFAULT_DAYS));
+
+  // Current Capacity for a line = Number of days x sum(Per Day Production),
+  // matching the Capacity Planning basis. "" when there is no reference data.
+  function currentFor(line: string, d: string): string {
+    const n = Number(d);
+    if (!autoFill || !n || n <= 0 || !LINES.includes(line as Line)) return "";
+    return String(lineCapacity(factory, line as Line, n));
+  }
+
+  // Default the form to one row per Line, with Current Capacity pre-filled.
+  const [entries, setEntries] = useState<Entry[]>(() =>
+    LINES.map((line) => ({
+      process: line,
+      currentCapacity: currentFor(line, String(DEFAULT_DAYS)),
+      requiredCapacity: "",
+      actionRequired: "",
+    }))
+  );
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [today, setToday] = useState("");
   useEffect(() => setToday(new Date().toLocaleDateString()), []);
 
+  // Re-derive Current Capacity for known lines when the day count changes.
+  useEffect(() => {
+    if (!autoFill) return;
+    setEntries((list) =>
+      list.map((e) =>
+        LINES.includes(e.process as Line)
+          ? { ...e, currentCapacity: currentFor(e.process, days) }
+          : e
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, autoFill]);
+
   function setField(i: number, k: keyof Entry, v: string) {
-    setEntries((list) => list.map((e, idx) => (idx === i ? { ...e, [k]: v } : e)));
+    setEntries((list) =>
+      list.map((e, idx) => {
+        if (idx !== i) return e;
+        const next = { ...e, [k]: v };
+        // Selecting a Line auto-fills its Current Capacity.
+        if (k === "process") next.currentCapacity = currentFor(v, days);
+        return next;
+      })
+    );
   }
 
   function addEntry() {
@@ -65,7 +107,14 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
     setLoading(false);
     if (!res.ok) return setMsg({ ok: false, text: data.error || "Failed to submit." });
     setMsg({ ok: true, text: `Submitted ${data.count} process${data.count > 1 ? "es" : ""}.` });
-    setEntries([emptyEntry()]);
+    setEntries(
+      LINES.map((line) => ({
+        process: line,
+        currentCapacity: currentFor(line, days),
+        requiredCapacity: "",
+        actionRequired: "",
+      }))
+    );
   }
 
   return (
@@ -73,7 +122,13 @@ export default function BottleneckForm({ factory, userEmail }: { factory: string
       <div className="note">
         <strong>Capacity basis:</strong> Available Hr = 18 (2 combined shifts at maximum efficiency). Gap =
         Required − Current; a positive gap is a shortfall to act on. Add multiple processes if applicable.
+        {autoFill
+          ? " Current Capacity auto-fills per Line = Number of days × Per Day Production; edit if needed."
+          : " No reference data for this plant — enter Current Capacity manually."}
       </div>
+
+      <label>Number of days</label>
+      <input type="number" min="1" value={days} onChange={(e) => setDays(e.target.value)} placeholder="e.g. 25" />
 
       {entries.map((e, i) => {
         const gap = gapOf(e);
